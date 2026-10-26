@@ -3,8 +3,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { DiscoverySession } from "./types";
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 export const cloudEnabled = !!(URL && KEY);
 
 let sb: SupabaseClient | null = null;

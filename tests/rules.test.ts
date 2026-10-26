@@ -126,3 +126,31 @@ console.log("\nAgent tool guards");
   });
 }
 console.log(`\n${pass} checks passed`);
+
+// ---- robustness: malformed tool inputs must not crash ----
+console.log("\nTool input robustness");
+{
+  const s = newSession(); const h = hyp(); s.hypotheses = [h];
+  const ctx = { userTexts: ["young women in Lusaka"] };
+  t("segments sent as a plain string", () => {
+    const r = runTool(s, "update_customer_discovery", { segments: "Young working women in Lusaka aged 22-30" }, ctx);
+    assert.deepEqual(r.state.venture.segments, ["Young working women in Lusaka aged 22-30"]);
+  });
+  t("hypotheses sent as a JSON string", () => {
+    const r = runTool(s, "propose_hypotheses", { hypotheses: JSON.stringify([{ type: "customer", statement: "Young women..." }]) }, ctx);
+    assert.ok(!r.isError); assert.equal(r.state.hypotheses.length, 2);
+  });
+  t("questions sent as plain strings", () => {
+    const r = runTool(s, "add_interview_questions", { questions: ["Tell me about the last time you saved money."] }, ctx);
+    assert.equal(r.state.questions.length, 1);
+  });
+  t("missing order / remove never throws", () => {
+    assert.ok(!runTool(s, "set_priorities", {}, ctx).isError);
+    assert.ok(!runTool(s, "update_customer_discovery", { remove: "x" }, ctx).isError);
+  });
+  t("whole input as a JSON string", () => {
+    const r = runTool(s, "update_venture", JSON.stringify({ idea: "Pension savings for young women" }), ctx);
+    assert.equal(r.state.venture.idea, "Pension savings for young women");
+  });
+}
+console.log(`\n${pass} checks passed`);

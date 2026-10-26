@@ -27,7 +27,8 @@ function limited(key: string) {
 }
 
 async function authUser(req: NextRequest): Promise<{ id: string } | null | "no-auth"> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   if (!url || !key) return "no-auth"; // local mode: no accounts configured
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
   if (!token) return null;
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
   // UAT: lets the demo simulate an AI outage (NFR-07)
   if (body.simulateFailure) return NextResponse.json({ error: "Simulated AI service failure (demo mode)." }, { status: 503 });
 
-  if (!process.env.ANTHROPIC_API_KEY)
+  const apiKey = (process.env.ANTHROPIC_API_KEY || "").trim(); // tolerate stray spaces/line breaks from copy-paste
+  if (!apiKey)
     return NextResponse.json({ error: "The AI service is not configured yet (ANTHROPIC_API_KEY missing on the server)." }, { status: 503 });
 
   const user = await authUser(req);
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
   // API requires alternating turns starting with user
   while (messages.length && messages[0].role !== "user") messages.shift();
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const client = new Anthropic({ apiKey });
   const actions: string[] = [];
   let reply = "";
 
@@ -91,9 +93,16 @@ export async function POST(req: NextRequest) {
       const uses = res.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
       if (res.stop_reason !== "tool_use" || !uses.length) break;
 
-      messages.push({ role: "assistant", content: res.content });
+      // Send back only clean text/tool_use blocks so newer response fields can't invalidate the next request
+      const assistantBlocks: Anthropic.ContentBlockParam[] = [];
+      for (const b of res.content as any[]) {
+        if (b.type === "text" && b.text) assistantBlocks.push({ type: "text", text: b.text });
+        else if (b.type === "tool_use") assistantBlocks.push({ type: "tool_use", id: b.id, name: b.name, input: b.input ?? {} });
+        else if (b.type === "thinking" || b.type === "redacted_thinking") assistantBlocks.push(b);
+      }
+      messages.push({ role: "assistant", content: assistantBlocks });
       const results: Anthropic.ToolResultBlockParam[] = uses.map((u) => {
-        const r = runTool(session, u.name, u.input as Record<string, unknown>, { userTexts });
+        const r = runTool(session, u.name, u.input, { userTexts });
         session = r.state;
         if (r.action) actions.push(r.action);
         if (r.isError && r.result.startsWith("REJECTED")) actions.push("Rules engine blocked an AI action");
@@ -102,11 +111,20 @@ export async function POST(req: NextRequest) {
       messages.push({ role: "user", content: results });
     }
   } catch (e: any) {
-    const status = e?.status === 429 ? 429 : 502;
-    return NextResponse.json(
-      { error: status === 429 ? "The AI service is busy. Your input is saved - please retry." : "The AI service didn't respond. Your input is saved - please retry." },
-      { status },
-    );
+    // Log the real cause for Vercel Runtime Logs, and give the user a specific, safe explanation
+    console.error("[VumbuaAI] Claude API error:", e?.status, e?.message);
+    const s = e?.status;
+    const msg =
+      s === 401 ? "The AI service rejected the API key (401). Check ANTHROPIC_API_KEY in Vercel, then redeploy." :
+      s === 403 ? "The API key doesn't have permission for this request (403). Check the key's workspace in the Claude Console." :
+      s === 404 ? `The AI model "${MODEL}" wasn't found (404). Check ANTHROPIC_MODEL in Vercel.` :
+      s === 400 && /credit|balance|billing/i.test(e?.message || "") ? "The Claude API account has no credit. Add credit in the Claude Console." :
+      s === 400 ? `The AI service rejected the request (400: ${String(e?.error?.error?.message || e?.message || "").slice(0, 160)}). Your input is saved - please retry.` :
+      !s && e?.message ? `VumbuaAI hit an internal error (${String(e.message).slice(0, 160)}). Your input is saved - please retry.` :
+      s === 429 ? "The AI service is busy or a usage limit was reached. Your input is saved - please retry shortly." :
+      s === 529 || s === 503 ? "The AI service is temporarily overloaded. Your input is saved - please retry." :
+      "The AI service didn't respond. Your input is saved - please retry.";
+    return NextResponse.json({ error: msg }, { status: s === 429 ? 429 : 502 });
   }
 
   return NextResponse.json({ reply: reply || "Done - see the workspace for updates.", actions, notes, session });

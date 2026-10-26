@@ -176,11 +176,61 @@ export interface ToolResult { state: DiscoverySession; result: string; isError?:
 
 const addUnique = (list: string[], items?: string[]) => {
   const out = [...list];
-  for (const i of items || []) if (i && !out.some((x) => x.toLowerCase() === i.toLowerCase())) out.push(i.trim());
+  for (const raw of items || []) {
+    const i = String(raw ?? "").trim();
+    if (i && !out.some((x) => x.toLowerCase() === i.toLowerCase())) out.push(i);
+  }
   return out;
 };
 
+const ARRAY_KEYS = [
+  "segments", "early_adopters", "problems", "alternatives", "unmet_needs", "remove", "order", "questions",
+  "hypotheses", "evidence_ids", "unresolved", "supporting_ids", "contradicting_ids", "gaps", "hypothesis_ids",
+];
+
+/** Models occasionally send an array as a JSON string or a single value - normalise before use. */
+function toArray(x: unknown): any[] {
+  if (Array.isArray(x)) return x;
+  if (x == null || x === "") return [];
+  if (typeof x === "string") {
+    const t = x.trim();
+    if (t.startsWith("[")) { try { const p = JSON.parse(t); if (Array.isArray(p)) return p; } catch { /* fall through */ } }
+    return [t];
+  }
+  return [x];
+}
+
+export function normaliseInput(input: unknown): Record<string, any> {
+  let obj: any = input;
+  if (typeof obj === "string") { try { obj = JSON.parse(obj); } catch { obj = {}; } }
+  if (!obj || typeof obj !== "object") obj = {};
+  const out: Record<string, any> = { ...obj };
+  for (const k of ARRAY_KEYS) if (k in out) out[k] = toArray(out[k]);
+  for (const k of ["hypotheses", "questions"]) {
+    if (Array.isArray(out[k])) out[k] = out[k].map((it: any) => {
+      if (typeof it === "string") return k === "questions" ? { text: it, hypothesis_ids: [] } : { type: "problem", statement: it };
+      return it && typeof it === "object" && "hypothesis_ids" in it ? { ...it, hypothesis_ids: toArray(it.hypothesis_ids) } : it;
+    });
+  }
+  return out;
+}
+
+/** Never let one bad tool call crash the whole reply - return the problem to the model instead. */
 export function runTool(
+  s0: DiscoverySession,
+  name: string,
+  rawInput: unknown,
+  ctx: { userTexts: string[] },
+): ToolResult {
+  try {
+    return runToolInner(s0, name, normaliseInput(rawInput), ctx);
+  } catch (e: any) {
+    console.error(`[VumbuaAI] tool ${name} failed:`, e?.message);
+    return { state: s0, result: `Tool error in ${name}: ${e?.message || "unknown error"}. Check the input format and try again.`, isError: true };
+  }
+}
+
+function runToolInner(
   s0: DiscoverySession,
   name: string,
   input: Record<string, any>,
@@ -207,7 +257,7 @@ export function runTool(
       v.problems = addUnique(v.problems, input.problems);
       v.alternatives = addUnique(v.alternatives, input.alternatives);
       v.unmetNeeds = addUnique(v.unmetNeeds, input.unmet_needs);
-      const rm = new Set((input.remove || []).map((x: string) => x.toLowerCase()));
+      const rm = new Set((input.remove || []).map((x: unknown) => String(x).toLowerCase()));
       if (rm.size) for (const k of ["segments", "earlyAdopters", "problems", "alternatives", "unmetNeeds"] as const)
         v[k] = v[k].filter((x) => !rm.has(x.toLowerCase()));
       return { state: applyRules(s), result: "Customer discovery map updated.", action: "Updated customers & problem map" };
@@ -238,11 +288,11 @@ export function runTool(
       return { state: applyRules(s), result: `Draft revision ${h.id} created; original ${old.id} is preserved until the founder approves the revision.`, action: "Proposed a hypothesis revision" };
     }
     case "set_priorities": {
-      (input.order as string[]).forEach((id, i) => { const h = findH(id); if (h) h.priority = i + 1; });
+      (input.order || []).forEach((id: string, i: number) => { const h = findH(id); if (h) h.priority = i + 1; });
       return { state: applyRules(s), result: "Priorities updated.", action: "Re-prioritised assumptions" };
     }
     case "add_interview_questions": {
-      const qs = (input.questions || []).map((q: any) => ({
+      const qs = (input.questions || []).filter((q: any) => q && typeof q.text === "string" && q.text.trim()).map((q: any) => ({
         id: uid("q_"), text: q.text.trim(), hypothesisIds: q.hypothesis_ids || [], purpose: q.purpose, flags: lintQuestion(q.text),
       }));
       s.questions = input.replace_all ? qs : [...s.questions, ...qs];
