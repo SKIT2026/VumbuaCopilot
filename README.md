@@ -46,13 +46,13 @@ Create an API key at console.anthropic.com and set a monthly spend limit.
 |---|---|
 | `ANTHROPIC_API_KEY` | your Claude key (server-only - never prefix with NEXT_PUBLIC_) |
 | `ANTHROPIC_MODEL` | optional, default `claude-sonnet-5-5` |
-| `RATE_LIMIT_PER_HOUR` | optional, default `40` per visitor |
+| `RATE_LIMIT_PER_HOUR` | optional, default `60` per user |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 
 Then redeploy.
 
-**Sign-in is off by default.** Anyone with the link can use VumbuaAI and sessions are saved in their own browser. To require accounts and store sessions in Supabase, add `NEXT_PUBLIC_REQUIRE_LOGIN=true` in Vercel and redeploy.
+**Sign-in is on by default**, so each user keeps a saved history across devices. For open access without accounts (sessions saved only in the visitor's browser), add `NEXT_PUBLIC_REQUIRE_LOGIN=false` in Vercel and redeploy.
 
 ### Background knowledge
 VumbuaAI reads `lib/knowledge.ts` before every reply (currently the five-step Customer Discovery playbook: hypothesis, persona, validation, gate checks, MVP). Add new sections there to teach it more.

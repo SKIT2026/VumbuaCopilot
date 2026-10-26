@@ -15,7 +15,7 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 const MAX_TOOL_ROUNDS = 8;
 const MAX_HISTORY = 24;
 const MAX_INPUT_CHARS = 4000;
-const RATE_LIMIT = Number(process.env.RATE_LIMIT_PER_HOUR || 40);
+const RATE_LIMIT = Number(process.env.RATE_LIMIT_PER_HOUR || 60);
 
 // NFR-09: simple per-user hourly limit (per serverless instance).
 const hits = new Map<string, number[]>();
@@ -30,7 +30,7 @@ function limited(key: string) {
 async function authUser(req: NextRequest): Promise<{ id: string } | null | "no-auth"> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  const loginRequired = process.env.NEXT_PUBLIC_REQUIRE_LOGIN?.trim().toLowerCase() === "true";
+  const loginRequired = process.env.NEXT_PUBLIC_REQUIRE_LOGIN?.trim().toLowerCase() !== "false";
   if (!loginRequired || !url || !key) return "no-auth"; // open mode: no accounts, rate-limited per visitor
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
   if (!token) return null;
