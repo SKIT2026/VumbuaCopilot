@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { TOOLS, runTool, sessionSnapshot } from "@/lib/agent-tools";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
+import { KNOWLEDGE } from "@/lib/knowledge";
 import { applyRules, lintText } from "@/lib/rules";
 import type { DiscoverySession } from "@/lib/types";
 
@@ -14,7 +15,7 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 const MAX_TOOL_ROUNDS = 8;
 const MAX_HISTORY = 24;
 const MAX_INPUT_CHARS = 4000;
-const RATE_LIMIT = Number(process.env.RATE_LIMIT_PER_HOUR || 60);
+const RATE_LIMIT = Number(process.env.RATE_LIMIT_PER_HOUR || 40);
 
 // NFR-09: simple per-user hourly limit (per serverless instance).
 const hits = new Map<string, number[]>();
@@ -29,7 +30,8 @@ function limited(key: string) {
 async function authUser(req: NextRequest): Promise<{ id: string } | null | "no-auth"> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  if (!url || !key) return "no-auth"; // local mode: no accounts configured
+  const loginRequired = process.env.NEXT_PUBLIC_REQUIRE_LOGIN?.trim().toLowerCase() === "true";
+  if (!loginRequired || !url || !key) return "no-auth"; // open mode: no accounts, rate-limited per visitor
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
   if (!token) return null;
   const { data } = await createClient(url, key).auth.getUser(token);
@@ -81,7 +83,8 @@ export async function POST(req: NextRequest) {
         model: MODEL,
         max_tokens: 2000,
         system: [
-          { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+          { type: "text", text: SYSTEM_PROMPT },
+          { type: "text", text: KNOWLEDGE, cache_control: { type: "ephemeral" } },
           { type: "text", text: `Current workspace state (JSON):\n${sessionSnapshot(session)}` },
         ],
         tools: TOOLS,

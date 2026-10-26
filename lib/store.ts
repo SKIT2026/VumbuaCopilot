@@ -5,7 +5,10 @@ import type { DiscoverySession } from "./types";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-export const cloudEnabled = !!(URL && KEY);
+// Accounts are OFF by default: anyone with the link can use VumbuaAI and sessions stay in their browser.
+// Set NEXT_PUBLIC_REQUIRE_LOGIN=true in Vercel (and redeploy) to switch sign-in and cloud storage back on.
+export const loginRequired = process.env.NEXT_PUBLIC_REQUIRE_LOGIN?.trim().toLowerCase() === "true";
+export const cloudEnabled = loginRequired && !!(URL && KEY);
 
 let sb: SupabaseClient | null = null;
 export function supabase() {

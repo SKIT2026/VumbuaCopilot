@@ -95,7 +95,7 @@ export default function Home() {
         <p className="muted" style={{ margin: 0 }}>
           {cloudEnabled
             ? "Sessions are stored in a secured database linked to your account, only visible to you, and kept until you delete them. "
-            : "Running in local mode: sessions are stored only in this browser until you delete them or clear site data. "}
+            : "No sign-in needed. Your sessions are saved only in this browser on this device - they won't appear on another device, and clearing your browser data deletes them, so download your report to keep a copy. "}
           Messages you send to VumbuaAI are processed by Anthropic's Claude to generate guidance. Please don't enter customers' names,
           contact details or confidential information. <Link href="/privacy">Privacy and data details</Link>.
         </p>

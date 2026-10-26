@@ -105,7 +105,7 @@ export default function Workspace() {
         </Link>
         <div className="ws-title">{s.title}</div>
         <small role="status" aria-live="polite">
-          {saveState === "saving" ? "Saving..." : saveState === "error" ? "Not saved to cloud - kept in this browser" : cloudEnabled ? "Saved" : "Saved in this browser"}
+          {saveState === "saving" ? "Saving..." : saveState === "error" ? "Couldn't save - try again" : cloudEnabled ? "Saved" : "Saved in this browser"}
         </small>
         <label style={{ fontWeight: "normal", display: "flex", gap: 6, alignItems: "center", margin: 0 }} title="For the acceptance test: makes the next AI request fail">
           <input type="checkbox" style={{ width: "auto" }} checked={simulateFailure} onChange={(e) => setSimulateFailure(e.target.checked)} />

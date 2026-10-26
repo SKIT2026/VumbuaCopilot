@@ -9,7 +9,7 @@ export default function Privacy() {
         <h3>What is stored</h3>
         <p>Your venture details, hypotheses, interview guide, the evidence you record, AI assessments, your decisions and the chat history of each discovery session.</p>
         <h3>Where and for how long</h3>
-        <p>With an account, sessions are saved in a Supabase database protected by row-level security, so only you can read them. A copy is also kept in your browser so work is not lost if the connection drops. Data is kept until you delete it.</p>
+        <p>No account is needed. Your sessions are saved only in your own browser on this device - they are not stored on our servers. They stay until you delete them or clear your browser's site data. Download your Evidence Report to keep a permanent copy.</p>
         <h3>AI processing</h3>
         <p>When you message VumbuaAI, your message and a summary of the session are sent to Anthropic's Claude API to generate guidance. The API key stays on our server and is never sent to your browser.</p>
         <h3>Please minimise personal information</h3>
