@@ -51,9 +51,42 @@ export async function loadSession(id: string): Promise<DiscoverySession | null> 
   if (c) {
     const { data, error } = await c.from("sessions").select("data").eq("id", id).maybeSingle();
     if (error) throw error;
-    return (data?.data as DiscoverySession) ?? null;
+    // Fall back to the browser copy (e.g. a session started before signing in), so work is never lost
+    return (data?.data as DiscoverySession) ?? lsAll()[id] ?? null;
   }
   return lsAll()[id] ?? null;
+}
+
+/** True when sign-in is not required, or the visitor has a valid session. */
+export async function isSignedIn(): Promise<boolean> {
+  const c = supabase();
+  if (!c) return true;
+  const { data } = await c.auth.getSession();
+  return !!data.session;
+}
+
+/** Sessions saved in this browser that are not yet in the signed-in user's account. */
+export async function localOnlySessions(): Promise<DiscoverySession[]> {
+  const c = supabase();
+  if (!c) return [];
+  const { data, error } = await c.from("sessions").select("id");
+  if (error) return [];
+  const cloud = new Set((data || []).map((r) => r.id));
+  return Object.values(lsAll()).filter((s) => !cloud.has(s.id));
+}
+
+/** Copy browser-only sessions into the signed-in account. */
+export async function importLocalSessions(list: DiscoverySession[]): Promise<number> {
+  let n = 0;
+  for (const s of list) { await saveSession(s); n++; }
+  return n;
+}
+
+/** Remove browser-only copies the user chose not to import. */
+export function discardLocalSessions(ids: string[]) {
+  const all = lsAll();
+  for (const id of ids) delete all[id];
+  lsWrite(all);
 }
 
 export async function saveSession(s: DiscoverySession): Promise<void> {

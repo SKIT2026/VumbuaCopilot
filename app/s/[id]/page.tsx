@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { ChatMessage, DiscoverySession } from "@/lib/types";
 import { applyRules, nextStepHint, now, STAGES, stageDone, uid, type StageKey } from "@/lib/rules";
-import { authToken, cloudEnabled, deleteSession, loadSession, saveSession } from "@/lib/store";
+import { authToken, cloudEnabled, deleteSession, isSignedIn, loadSession, saveSession } from "@/lib/store";
 import { DecisionPanel, EvidencePanel, HypothesesPanel, InterviewPanel, VenturePanel } from "@/components/panels";
 import { ReportPanel } from "@/components/report";
 
@@ -33,8 +33,13 @@ export default function Workspace() {
   const [simulateFailure, setSimulateFailure] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [needsSignIn, setNeedsSignIn] = useState(false);
+
   useEffect(() => {
-    loadSession(id).then((x) => (x ? setS(applyRules(x)) : setMissing(true))).catch(() => setMissing(true));
+    isSignedIn().then((ok) => {
+      if (!ok) { setNeedsSignIn(true); return; }
+      loadSession(id).then((x) => (x ? setS(applyRules(x)) : setMissing(true))).catch(() => setMissing(true));
+    });
   }, [id]);
 
   const persist = useCallback((next: DiscoverySession) => {
@@ -70,6 +75,7 @@ export default function Workspace() {
         body: JSON.stringify({ session: s, message: text, simulateFailure }),
       });
       const data = await res.json().catch(() => ({ error: "The AI service returned an unreadable response." }));
+      if (res.status === 401) { setNeedsSignIn(true); throw new Error("Your sign-in has expired. Please sign in again - your work is saved."); }
       if (!res.ok || data.error) throw new Error(data.error || `AI request failed (${res.status})`);
       const userMsg: ChatMessage = { id: uid("m_"), role: "user", content: text, createdAt: now() };
       const aiMsg: ChatMessage = { id: uid("m_"), role: "assistant", content: data.reply, actions: data.actions, createdAt: now() };
@@ -88,6 +94,13 @@ export default function Workspace() {
 
   const ask = (prompt: string) => { setMobileView("chat"); send(prompt); };
 
+  if (needsSignIn && !s) return (
+    <main className="home">
+      <h1>Please sign in</h1>
+      <p>Sign in to open this discovery session. Anything you saved in this browser is kept, and you can add it to your account after signing in.</p>
+      <Link className="btn btn-primary" href="/">Go to sign in</Link>
+    </main>
+  );
   if (missing) return (
     <main className="home"><h1>Session not found</h1><p>It may have been deleted, or you may need to sign in.</p><Link href="/">Back to your sessions</Link></main>
   );
@@ -152,7 +165,9 @@ export default function Workspace() {
                 <strong>Something went wrong.</strong> {error}
                 <div style={{ marginTop: 6 }}>Your message and all your work are safe.</div>
                 <div className="row" style={{ marginTop: 8 }}>
-                  <button className="btn-primary btn-sm" onClick={() => pending && send(pending)}>Retry</button>
+                  {needsSignIn
+                    ? <Link className="btn btn-primary btn-sm" href="/">Sign in</Link>
+                    : <button className="btn-primary btn-sm" onClick={() => pending && send(pending)}>Retry</button>}
                   <button className="btn-sm" onClick={() => { setError(null); setPending(null); }}>Edit message instead</button>
                   {simulateFailure && <button className="btn-sm" onClick={() => setSimulateFailure(false)}>Turn off simulated outage</button>}
                 </div>

@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { cloudEnabled, deleteSession, listSessions, saveSession, supabase, type SessionSummary } from "@/lib/store";
+import { cloudEnabled, deleteSession, discardLocalSessions, importLocalSessions, listSessions, localOnlySessions, saveSession, supabase, type SessionSummary } from "@/lib/store";
+import type { DiscoverySession } from "@/lib/types";
 import { newSession } from "@/lib/rules";
 
 export default function Home() {
@@ -22,9 +23,21 @@ export default function Home() {
 
   const signedIn = !cloudEnabled || !!email;
 
+  const [localOnly, setLocalOnly] = useState<DiscoverySession[]>([]);
+
   useEffect(() => {
-    if (ready && signedIn) listSessions().then(setSessions).catch((e) => setErr(e.message));
+    if (!ready || !signedIn) return;
+    listSessions().then(setSessions).catch((e) => setErr(e.message));
+    if (cloudEnabled) localOnlySessions().then(setLocalOnly);
   }, [ready, signedIn]);
+
+  async function importLocal() {
+    try {
+      await importLocalSessions(localOnly);
+      setLocalOnly([]);
+      setSessions(await listSessions());
+    } catch (e: any) { setErr(e.message); }
+  }
 
   async function create() {
     const s = newSession();
@@ -69,6 +82,16 @@ export default function Home() {
             <h2>Your discovery sessions</h2>
             <button className="btn-primary" onClick={create}>+ New discovery session</button>
           </div>
+          {localOnly.length > 0 && (
+            <div className="rule-note" role="status">
+              <strong>{localOnly.length} session(s) found saved only in this browser</strong> ({localOnly.map((x) => x.title).join(", ")}).
+              Add them to your account so they're in your history on any device?
+              <div className="row" style={{ marginTop: 8 }}>
+                <button className="btn-primary btn-sm" onClick={importLocal}>Add to my account</button>
+                <button className="btn-sm" onClick={() => { if (confirm("Remove these browser-only sessions permanently?")) { discardLocalSessions(localOnly.map((x) => x.id)); setLocalOnly([]); } }}>Discard</button>
+              </div>
+            </div>
+          )}
           {sessions.length === 0 ? (
             <div className="card"><p className="muted">No sessions yet. Start one to describe your venture to VumbuaAI.</p></div>
           ) : (
