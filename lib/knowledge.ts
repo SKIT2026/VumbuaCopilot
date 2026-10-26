@@ -1,5 +1,8 @@
 // VumbuaAI background knowledge - read by the agent before every reply.
-// Condensed and paraphrased from course material supplied by the project team.
+// Condensed and paraphrased from course material supplied by the project team:
+//  - a Customer Discovery playbook article (five steps, gate checks)
+//  - Steve Blank, "Why the Lean Start-Up Changes Everything", Harvard Business Review, May 2013
+// Source documents are NOT stored in this public repo (copyright); only paraphrased summaries.
 // To extend: add a new section below, keep it concise, then redeploy.
 
 export const KNOWLEDGE = `
@@ -79,10 +82,40 @@ In VumbuaAI, the founder records this decision in the Decision panel; your role 
 - Measures: build progress against budget, schedule, scope and quality; which features are and aren't used; how many committed customers followed through, gave strong testimonials, use it unassisted or needed help; whether onboarding learnings can be systemised; waiting-list sign-ups; channels identified.
 - Step 4 gate check: refine ROI with development, implementation and sustainment costs; weigh desirability and urgency (can costs shift to customers?); refine SAM, SOM, LTV and revenue; plan capital and resources for scaling.
 
+## Lean start-up principles (Steve Blank, "Why the Lean Start-Up Changes Everything", HBR 2013)
+Key ideas, paraphrased. Cite the article by title and author if a founder asks for the source; do not quote it at length.
+- A start-up is a temporary organisation searching for a repeatable, scalable business model. Established firms execute a known model; start-ups search for one. Do not let founders behave like a big company executing a plan.
+- Business plans rarely survive first contact with customers, and five-year forecasts for a new venture are mostly guesswork. Discourage polishing plans or projections before testing assumptions.
+- Successful start-ups move quickly through repeated small failures, adapting as they learn from customers.
+- Three principles:
+  1. On day one, all a founder has is a set of untested hypotheses (good guesses). Summarise them on a business model canvas instead of writing a business plan.
+  2. Customer development: "get out of the building" and test every part of the business model with potential users, buyers and partners - features, pricing, channels and affordable ways to acquire customers.
+  3. Agile development: build the product in short, iterative cycles, producing minimum viable products to test, rather than specifying everything up front.
+- Business model canvas - nine building blocks, each holding hypotheses to test. Use these prompts to widen a founder's thinking beyond customer and problem:
+  - Customer segments: for whom are we creating value? Who are the most important customers? What are the customer archetypes?
+  - Value propositions: what value do we deliver? Which customer problems do we help solve? What bundle do we offer each segment? Which needs do we satisfy? What is the minimum viable product?
+  - Channels: through which channels do segments want to be reached? How do others reach them now? Which work best and are most cost-efficient? How do they fit customers' routines?
+  - Customer relationships: how do we get, keep and grow customers? How costly is each relationship?
+  - Revenue streams: for what value are customers really willing to pay? What do they pay for now? What revenue model and pricing tactics?
+  - Key resources, key activities, key partners (and suppliers), and cost structure: what the value proposition requires, what is most expensive, and what partners provide.
+  In VumbuaAI, map canvas blocks to hypothesis types: customer segments -> customer; value proposition -> value_proposition / problem; channels -> channel; revenue streams -> revenue.
+- The four stages of customer development: (1) customer discovery - turn the idea into business-model hypotheses, test assumptions about customer needs, then build an MVP to try the proposed solution; (2) customer validation - test the remaining hypotheses and validate interest through early orders or product usage, and pivot if there is no interest; (3) customer creation - with proven hypotheses, build demand and scale sales and marketing; (4) company building - move from a search team to functional departments executing the model. Stages 1-2 are "search", 3-4 are "execution". Each stage is iterative and founders will likely fail several times before finding the right approach.
+- Iterate vs pivot: an iteration is a small adjustment; a pivot is a substantive change to one or more hypotheses (e.g. a new customer segment). Pivoting is normal, not failure.
+- Lean vs traditional: strategy is hypothesis-driven (business model) not implementation-driven (business plan); new-product process is customer development not a linear plan; engineering is iterative not fully specified up front; teams are hired for learning, nimbleness and speed; metrics that matter are customer acquisition cost, lifetime value, churn and virality rather than standard financial statements; failure is expected and fixed by iterating or pivoting; decisions run on good-enough data rather than complete data.
+- Feedback beats secrecy: in most industries, constant customer feedback is worth more than "stealth mode". Encourage founders to show early ideas to customers.
+- Examples to share when useful:
+  - Blue River Technology: after interviewing 100+ prospects in 10 weeks, the founders found golf courses (their first target for robotic mowers) did not value the idea, but farmers badly wanted chemical-free weed control. They pivoted, built a prototype in 10 weeks and raised funding within months.
+  - GE Energy Storage (Durathon battery): instead of a traditional product launch, the team met dozens of prospects to listen, not sell, learning how batteries were bought and used. They dropped one target segment (data centres), found a new one (utilities) and narrowed "telecom" to mobile operators in developing countries with unreliable grids.
+- Honest limits: lean methods do not guarantee any single venture's success; the claim is that across many ventures they produce fewer failures. Do not promise founders success.
+- Lean methods apply to small "main street" businesses and to large corporations innovating, not only to tech start-ups - relevant to founders in Zambia and the region building small and informal-sector businesses.
+
 ## How to use this knowledge
 - When a founder is vague about the problem, run the 5 Whys with them.
 - When the persona is broad, push for one narrow persona first and suggest testing others separately.
 - When suggesting next actions, refer to the customer funnel numbers (spoken to, interested, LOI, committed) and ask for them.
 - When a recommendation approaches a go/no-go, walk through the gate-check factors and flag which ones lack evidence.
 - Refer to the steps by name so founders learn the process ("You're in Step 2: Identify a persona").
+- When a founder only talks about customer and problem, use the business model canvas prompts to surface untested channel, revenue and cost assumptions.
+- When evidence contradicts a core hypothesis, frame the choice as iterate (small change) or pivot (change a hypothesis) and leave the decision to the founder.
+- If a founder wants to write a business plan or five-year forecast first, explain why testing hypotheses comes first.
 `;
